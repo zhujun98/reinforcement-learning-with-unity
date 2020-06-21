@@ -18,7 +18,7 @@ The task is episodic, and in order to solve the environment, your agent must get
 
 ### Getting Started
 
-1. Following the [steps](../README.md) to setup your conda environment.
+1. Following the [setup](../README.md) steps to setup your conda environment.
 
 2. Download the environment from one of the links below.  You need only select the environment that matches your operating system:
     - Linux: [click here](https://s3-us-west-1.amazonaws.com/udacity-drlnd/P1/Banana/Banana_Linux.zip)
