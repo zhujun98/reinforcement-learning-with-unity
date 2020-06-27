@@ -1,5 +1,8 @@
 # Deep Reinforcement Learning Nanodegree
 
+[![License](https://img.shields.io/github/license/zhujun98/DRL-ND)](https://github.com/zhujun98/DRL-ND)
+![Language](https://img.shields.io/badge/language-python-blue)
+
 ### Instroduction
 
 This repository contains the solutions for the following projects:
