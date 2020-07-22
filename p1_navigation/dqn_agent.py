@@ -43,9 +43,10 @@ class Memory:
         states = np.vstack([e.state for e in experiences if e is not None])
         actions = np.vstack([e.action for e in experiences if e is not None])
         rewards = np.vstack([e.reward for e in experiences if e is not None])
-        next_states =np.vstack([e.next_state for e in experiences if e is not None])
-        dones = np.vstack([e.done for e in experiences if e is not None]).astype(
-                np.uint8)
+        next_states =np.vstack([
+            e.next_state for e in experiences if e is not None])
+        dones = np.vstack([
+            e.done for e in experiences if e is not None]).astype(np.uint8)
 
         return states, actions, rewards, next_states, dones
 
@@ -159,7 +160,7 @@ class DqnAgent:
               window=100,
               target_score=13,
               save_frequency=100,
-              output_frequency=1):
+              output_frequency=10):
         """Train the agent.
 
         :param gym.Env env: environment.
@@ -239,7 +240,7 @@ class DqnAgent:
 
             avg_score = np.mean(scores[-window:])
             if i % output_frequency == 0:
-                print(i, avg_score)
+                print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
 
             if i % save_frequency == 0:
                 self._save_model(i, eps, scores)
