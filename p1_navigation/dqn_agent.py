@@ -81,6 +81,7 @@ class DqnAgent:
             Q-learning update.
         :param int target_network_update_frequency: the frequency with which
             the target network updates.
+        :param str model_file: file name of where the model will be saved.
         """
         self._brain_name = brain_name
 
@@ -113,21 +114,20 @@ class DqnAgent:
             convenience of the inference stage, the default value is 0.0.
         """
         state = torch.from_numpy(state).float().unsqueeze(0).to(device)
-        self._model.eval()
+        self._model.eval()  # set the module in evaluation mode
         with torch.no_grad():
             action_values = self._model(state)
-        self._model.train()
+        self._model.train()  # set the module in training mode
 
         # Epsilon-greedy action selection
         if random.random() > epsilon:
-            return np.argmax(action_values.cpu().data.numpy())
+            return np.argmax(action_values.cpu().numpy())
         return random.choice(self._actions)
 
     def _learn(self, experiences):
         """Update value parameters using given batch of experience tuples.
 
         :param experiences (Tuple[torch.Variable]): (s, a, r, s', done)
-        :param float gamma: discount rate.
         """
         states, actions, rewards, next_states, dones = experiences
 
@@ -239,15 +239,17 @@ class DqnAgent:
             eps = max(eps_final, epsilon_decay_rate * eps)
 
             avg_score = np.mean(scores[-window:])
+
+            if avg_score >= target_score:
+                print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
+                self._save_model(i, eps, scores)
+                break
+
             if i % output_frequency == 0:
                 print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
 
             if i % save_frequency == 0:
                 self._save_model(i, eps, scores)
-
-            if avg_score >= target_score:
-                self._save_model(i, eps, scores)
-                break
 
         if i > i0:
             self._save_model(i, eps, scores)
