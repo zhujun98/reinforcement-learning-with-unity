@@ -28,7 +28,9 @@ The task is episodic, and in order to solve the environment, the agent must get 
 
 3. Place the file in the `p1_navigation/` folder, and unzip (or decompress) the file. 
 
-### (WIP) Challenge: Learning from Pixels
+4. Run the [Jupyter notebook](./Navigation.ipynb).
+
+### (TODO) Challenge: Learning from Pixels
 
 In this challenge, the agent learned directly from pixels!
 
