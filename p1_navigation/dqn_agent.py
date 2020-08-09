@@ -137,10 +137,12 @@ class DqnAgent:
 
     def train(self, env, *,
               n_episodes=1000,
-              epsilon_decay_rate=0.995,
+              eps_decay_rate=0.995,
+              eps_final=0.01,
               target_network_update_frequency=4,
               gamma=1.0,
               learning_rate=5e-4,
+              weight_decay=0,
               batch_size=16,
               replay_start_size=None,
               window=100,
@@ -151,12 +153,13 @@ class DqnAgent:
 
         :param gym.Env env: environment.
         :param int n_episodes: number of episodes.
-        :param int max_steps: maximum number of time steps.
-        :param float epsilon_decay_rate: decay rate of epsilon.
+        :param float eps_decay_rate: decay rate of epsilon.
+        :param float eps_final: final (minimum) epsilon value.
         :param int target_network_update_frequency: the frequency with which
             the target network updates.
         :param double gamma: discount factor gamma used in Q-learning update.
         :param double learning_rate: learning rate.
+        :param double weight_decay: L2 penalty.
         :param int batch_size: mini batch size.
         :param int replay_start_size: a uniform random policy is run for this
             number of frames before learning starts and the resulting
@@ -176,14 +179,13 @@ class DqnAgent:
         except FileNotFoundError:
             checkpoint = None
 
-        optimizer = optim.Adam(self._model.parameters(), lr=learning_rate)
-
-        eps_initial = 1.0
-        eps_final = 0.01
+        optimizer = optim.Adam(self._model.parameters(),
+                               lr=learning_rate,
+                               weight_decay=weight_decay)
 
         if checkpoint is None:
             i0 = 0
-            eps = eps_initial
+            eps = 1.0
             scores = []
         else:
             i0 = checkpoint['epoch']
@@ -242,7 +244,7 @@ class DqnAgent:
             scores.append(score)
 
             # update eps
-            eps = max(eps_final, epsilon_decay_rate * eps)
+            eps = max(eps_final, eps_decay_rate * eps)
 
             avg_score = np.mean(scores[-window:])
 
