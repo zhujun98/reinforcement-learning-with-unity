@@ -9,6 +9,7 @@ This repository contains the solutions for the following projects:
 
 - [P1 Nativagation](./p1_navigation)
 
+- [P2 Continuous control](/p2_continuous_control)
 
 ### Setup
 
