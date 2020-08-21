@@ -43,7 +43,7 @@ class Memory:
         states = np.vstack([e.state for e in experiences if e is not None])
         actions = np.vstack([e.action for e in experiences if e is not None])
         rewards = np.vstack([e.reward for e in experiences if e is not None])
-        next_states =np.vstack([
+        next_states = np.vstack([
             e.next_state for e in experiences if e is not None])
         dones = np.vstack([
             e.done for e in experiences if e is not None]).astype(np.uint8)
