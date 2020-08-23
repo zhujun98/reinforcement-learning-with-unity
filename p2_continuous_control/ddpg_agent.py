@@ -169,6 +169,7 @@ class DdpgAgent:
               n_episodes=1000,
               theta=0.15,
               sigma=0.2,
+              decay_rate=0.99,
               tau=0.001,
               gamma=1.0,
               learning_rate=(1e-3, 1e-3),
@@ -185,6 +186,7 @@ class DdpgAgent:
         :param int n_episodes: number of episodes.
         :param float theta: Ornstein-Uhlenbeck process constant.
         :param float sigma: Ornstein-Uhlenbeck process constant.
+        :param float decay_rate: noise decay rate.
         :param float tau: soft update rate of the target network.
         :param double gamma: discount factor.
         :param tuple learning_rate: learning rates for actor and critic models.
@@ -246,17 +248,19 @@ class DdpgAgent:
 
         brain_name = self._brain_name
         i = i0
-        random_process = OUProcess(
-            self._action_space, theta=theta, sigma=sigma)
+        decay = decay_rate ** i
         while i < n_episodes:
             i += 1
+
+            random_process = OUProcess(
+                self._action_space, theta=theta, sigma=sigma)
 
             env_info = env.reset(train_mode=True)[brain_name]
             state = env_info.vector_observations[0]
             score = 0
             # one episode has 1000 steps
             while True:
-                action = self._act(state, random_process.next())
+                action = self._act(state, random_process.next() * decay)
                 env_info = env.step(action)[brain_name]
                 reward = env_info.rewards[0]
                 next_state = env_info.vector_observations[0]
@@ -280,6 +284,8 @@ class DdpgAgent:
 
                 if done:
                     break
+
+            decay *= decay_rate
 
             scores.append(score)
             avg_score = np.mean(scores[-window:])
