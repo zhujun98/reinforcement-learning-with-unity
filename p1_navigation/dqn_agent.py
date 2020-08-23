@@ -185,11 +185,9 @@ class DqnAgent:
 
         if checkpoint is None:
             i0 = 0
-            eps = 1.0
             scores = []
         else:
             i0 = checkpoint['epoch']
-            eps = checkpoint['epsilon']
             scores = checkpoint['score_history']
             self._model.load_state_dict(checkpoint['model_state_dict'])
             self._model_target.load_state_dict(checkpoint['model_state_dict'])
@@ -209,6 +207,7 @@ class DqnAgent:
 
         brain_name = self._brain_name
         i = i0
+        eps = max(eps_final, eps_decay_rate ** i)
         while i < n_episodes:
             i += 1
 
@@ -250,24 +249,20 @@ class DqnAgent:
 
             if avg_score >= target_score:
                 print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
-                self._save_model(i, optimizer, eps, scores)
+                self._save_model(i, optimizer, scores)
                 break
 
             if i % output_frequency == 0:
                 print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
 
             if i % save_frequency == 0:
-                self._save_model(i, optimizer, eps, scores)
-
-        if i > i0:
-            self._save_model(i, optimizer, eps, scores)
+                self._save_model(i, optimizer, scores)
 
         return scores
 
-    def _save_model(self, epoch, optimizer, eps, scores):
+    def _save_model(self, epoch, optimizer, scores):
         torch.save({
             'epoch': epoch,
-            'epsilon': eps,
             'model_state_dict': self._model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'score_history': scores,
