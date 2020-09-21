@@ -138,21 +138,20 @@ class DdpgAgent:
         q_expected = self._model_critic(states, actions)
 
         # update critic by minimizing the loss
-        critic_loss = F.mse_loss(q_targets.detach(), q_expected)
-        # clear the gradients of all optimized
         opt_critic.zero_grad()
-        # compute gradient in the backward graph
+        critic_loss = F.mse_loss(q_targets.detach(), q_expected)
         critic_loss.backward()
-        # perform a single optimization step
         opt_critic.step()
 
         # update actor by minimizing the loss
+        opt_actor.zero_grad()
         actor_loss = self._model_critic(
             states.detach(), self._model_actor(states))
         actor_loss = -actor_loss.mean()
-        opt_actor.zero_grad()
         actor_loss.backward()
         opt_actor.step()
+
+        return actor_loss.item(), critic_loss.item()
 
     def train(self, env, *,
               n_episodes=1000,
@@ -209,9 +208,13 @@ class DdpgAgent:
         if checkpoint is None:
             i0 = 0
             scores = []
+            losses_actor = []
+            losses_critic = []
         else:
             i0 = checkpoint['epoch']
             scores = checkpoint['score_history']
+            losses_actor = checkpoint['actor_loss_history']
+            losses_critic = checkpoint['critic_loss_history']
             self._model_actor.load_state_dict(
                 checkpoint['model_actor_state_dict'])
             copy_nn(self._model_actor, self._model_actor_target)
@@ -230,7 +233,7 @@ class DdpgAgent:
             if avg_score > target_score:
                 print(f"Score of the current model {avg_score:8.2f} is already "
                       f"higher than the target score {target_score}!")
-                return scores
+                return scores, losses_actor, losses_critic
 
         if replay_start_size is None:
             replay_start_size = batch_size * 2
@@ -258,10 +261,14 @@ class DdpgAgent:
                 state = next_state
 
                 if len(self._memory) > replay_start_size:
-                    self._learn(self._memory.sample(batch_size),
-                                opt_actor,
-                                opt_critic,
-                                gamma)
+                    loss_actor, loss_critic = self._learn(
+                        self._memory.sample(batch_size),
+                        opt_actor,
+                        opt_critic,
+                        gamma)
+
+                    losses_actor.append(loss_actor)
+                    losses_critic.append(loss_critic)
 
                     # apply soft update
                     soft_update_nn(
@@ -281,24 +288,28 @@ class DdpgAgent:
 
             if avg_score >= target_score:
                 print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
-                self._save_model(i, opt_actor, opt_critic, scores)
+                self._save_model(i, opt_actor, opt_critic, scores,
+                                 [losses_actor, losses_critic])
                 break
 
             if i % output_frequency == 0:
                 print(f"Epoch: {i:04d}, average score: {avg_score:8.2f}")
 
             if i % save_frequency == 0:
-                self._save_model(i, opt_actor, opt_critic, scores)
+                self._save_model(i, opt_actor, opt_critic, scores,
+                                 [losses_actor, losses_critic])
 
         return scores
 
-    def _save_model(self, epoch, opt_actor, opt_critic, scores):
+    def _save_model(self, epoch, opt_actor, opt_critic, scores, losses):
         """Override."""
         torch.save({
             'epoch': epoch,
             'optimizer_actor_state_dict': opt_actor.state_dict(),
             'optimizer_critic_state_dict': opt_critic.state_dict(),
             'score_history': scores,
+            'actor_loss_history': losses[0],
+            'critic_loss_history': losses[1],
             'model_actor_state_dict': self._model_actor.state_dict(),
             'model_critic_state_dict': self._model_critic.state_dict(),
         }, self._model_file)
