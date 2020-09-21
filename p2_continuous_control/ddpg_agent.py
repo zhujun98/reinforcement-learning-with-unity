@@ -103,17 +103,6 @@ class DdpgAgent:
 
         self._memory = Memory(replay_memory_size)
 
-        self._action_space = action_space
-
-        self._model_actor = models[0].to(device)
-        self._model_actor_target = copy.deepcopy(models[0]).to(device)
-        self._model_critic = models[1].to(device)
-        self._model_critic_target = copy.deepcopy(models[1]).to(device)
-
-        self._model_file = model_file
-
-        self._memory = Memory(replay_memory_size)
-
     def _act(self, state, noise=0.):
         state = torch.from_numpy(state).float().to(device)
         self._model_actor.eval()  # set the module in evaluation mode
