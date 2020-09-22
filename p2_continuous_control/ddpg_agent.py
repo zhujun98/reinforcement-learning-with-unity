@@ -1,9 +1,7 @@
 """
 Copyright (c) 2020 Jun Zhu
 """
-from collections import deque, namedtuple
 import copy
-import random
 
 import numpy as np
 
@@ -11,69 +9,13 @@ import torch
 from torch import optim
 import torch.nn.functional as F
 
-from utilities import OUProcess
+from agent_base import _AgentBase, Memory
+from utilities import copy_nn, soft_update_nn, OUProcess
 
 device = torch.device("cuda:0") if torch.cuda.is_available() else "cpu"
 
 
-Transition = namedtuple("Transition", field_names=(
-    "state", "action", "reward", "next_state", "done"))
-
-
-class Memory:
-    """Fixed-size buffer to store experience tuples."""
-
-    def __init__(self, buffer_size):
-        """Initialization.
-
-        :param int buffer_size: maximum size of buffer.
-        """
-        self._buffer = deque(maxlen=buffer_size)
-
-    def append(self, state, action, reward, next_state, done):
-        """Add a new experience to memory."""
-        self._buffer.append(
-            Transition(state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        """Randomly sample a batch of sequences from memory.
-
-        :param int batch_size: sample batch size.
-        """
-        experiences = random.sample(self._buffer, k=batch_size)
-
-        states = np.vstack([e.state for e in experiences if e is not None])
-        actions = np.vstack([e.action for e in experiences if e is not None])
-        rewards = np.vstack([e.reward for e in experiences if e is not None])
-        next_states = np.vstack([
-            e.next_state for e in experiences if e is not None])
-        dones = np.vstack([
-            e.done for e in experiences if e is not None]).astype(np.uint8)
-
-        return states, actions, rewards, next_states, dones
-
-    def __len__(self):
-        return self._buffer.__len__()
-
-
-def copy_nn(src, dst):
-    """Copy the parameters of a source network to the target."""
-    dst.load_state_dict(copy.deepcopy(src.state_dict()))
-
-
-def soft_update_nn(src, dst, tau):
-    """Apply soft update to a target network.
-
-    :param torch.nn.Module src: src Neural network model.
-    :param torch.nn.Module dst: dst Neural network model.
-    :param float tau: soft update factor.
-    """
-    for src_param, dst_param in zip(src.parameters(), dst.parameters()):
-        dst_param.data.copy_(
-            tau * src_param.data + (1. - tau) * dst_param.data)
-
-
-class DdpgAgent:
+class DdpgAgent(_AgentBase):
     """Deep deterministic policy gradient agent.
 
     https://arxiv.org/pdf/1509.02971.pdf
@@ -86,20 +28,15 @@ class DdpgAgent:
 
         :param int action_space: action space size.
         :param tuple models: Neural network models for actor and critic.
-        :param str brain_name: the brain name of the environment.
-        :param str model_file: file to save the trained model.
         :param int replay_memory_size: size of the replay buffer.
         """
+        super().__init__(brain_name, model_file)
         self._action_space = action_space
 
         self._model_actor = models[0].to(device)
         self._model_actor_target = copy.deepcopy(models[0]).to(device)
         self._model_critic = models[1].to(device)
         self._model_critic_target = copy.deepcopy(models[1]).to(device)
-
-        self._brain_name = brain_name
-
-        self._model_file = model_file
 
         self._memory = Memory(replay_memory_size)
 
@@ -314,24 +251,3 @@ class DdpgAgent:
             'model_critic_state_dict': self._model_critic.state_dict(),
         }, self._model_file)
         print(f"Model save in {self._model_file} after {epoch} epochs!")
-
-    def play(self, env):
-        """Play the environment once.
-
-        :param gym.Env env: environment.
-        """
-        env_info = env.reset(train_mode=False)[self._brain_name]
-        state = env_info.vector_observations[0]
-        score = 0
-        while True:
-            action = self._act(state)
-            env_info = env.step(action)[self._brain_name]
-            next_state = env_info.vector_observations[0]
-            reward = env_info.rewards[0]
-            done = env_info.local_done[0]
-            score += reward
-            state = next_state
-            if done:
-                break
-
-        print(f"Final score is: {score}")
