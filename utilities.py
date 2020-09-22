@@ -86,8 +86,6 @@ def plot_losses(ax, loss1, label1, loss2=None, label2=None, *, downsampling=1.):
         ax2.set_ylabel(label2, color='tab:orange', fontsize=16)
         ax2.tick_params(axis='y', labelcolor='tab:orange')
 
-    ax.legend()
-
 
 class OUProcess:
     """Ornstein-Uhlenbeck process simulator."""
