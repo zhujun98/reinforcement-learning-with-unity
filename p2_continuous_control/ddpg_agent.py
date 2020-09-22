@@ -299,7 +299,7 @@ class DdpgAgent:
                 self._save_model(i, opt_actor, opt_critic, scores,
                                  [losses_actor, losses_critic])
 
-        return scores
+        return scores, losses_actor, losses_critic
 
     def _save_model(self, epoch, opt_actor, opt_critic, scores, losses):
         """Override."""

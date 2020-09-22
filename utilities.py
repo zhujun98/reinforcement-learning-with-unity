@@ -72,6 +72,23 @@ def plot_score_history(ax, scores, target_score):
     ax.legend()
 
 
+def plot_losses(ax, loss1, label1, loss2=None, label2=None, *, downsampling=1.):
+    stride = int(1./downsampling)
+
+    ax.plot(loss1[::stride], color='tab:blue')
+    ax.set_xlabel("Step", fontsize=16)
+    ax.set_ylabel(label1, color='tab:blue', fontsize=16)
+    ax.tick_params(axis='y', labelcolor='tab:blue')
+
+    if loss2 is not None:
+        ax2 = ax.twinx()
+        ax2.plot(loss2[::stride], color='tab:orange', alpha=0.5)
+        ax2.set_ylabel(label2, color='tab:orange', fontsize=16)
+        ax2.tick_params(axis='y', labelcolor='tab:orange')
+
+    ax.legend()
+
+
 class OUProcess:
     """Ornstein-Uhlenbeck process simulator."""
 

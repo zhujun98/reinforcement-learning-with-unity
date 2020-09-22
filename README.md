@@ -16,7 +16,7 @@ This repository contains the solutions for the following projects:
 For all the projects in this repository, you will need to create the following Conda environment in the first place:
 
 ```shell script
-$ conda create -n drlnd python=3.6  # 3.7 does not work because of the version of Tensorflow!
+$ conda create -n drlnd python=3.6
 $ conda activate drlnd
 $ cd python
 $ pip install .
