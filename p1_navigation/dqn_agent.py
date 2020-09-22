@@ -3,7 +3,6 @@ Copyright (c) 2020 Jun Zhu
 """
 import copy
 import random
-from collections import namedtuple, deque
 
 import numpy as np
 
@@ -11,68 +10,28 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
+from agent_base import _AgentBase, Memory
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-Transition = namedtuple("Trainsition", field_names=(
-    "state", "action", "reward", "next_state", "done"))
 
-
-class Memory:
-    """Fixed-size buffer to store experience tuples."""
-
-    def __init__(self, buffer_size):
-        """Initialization.
-
-        :param int buffer_size: maximum size of buffer.
-        """
-        self._buffer = deque(maxlen=buffer_size)
-
-    def append(self, state, action, reward, next_state, done):
-        """Add a new experience to memory."""
-        self._buffer.append(
-            Transition(state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        """Randomly sample a batch of sequences from memory.
-
-        :param int batch_size: sample batch size.
-        """
-        experiences = random.sample(self._buffer, k=batch_size)
-
-        states = np.vstack([e.state for e in experiences if e is not None])
-        actions = np.vstack([e.action for e in experiences if e is not None])
-        rewards = np.vstack([e.reward for e in experiences if e is not None])
-        next_states = np.vstack([
-            e.next_state for e in experiences if e is not None])
-        dones = np.vstack([
-            e.done for e in experiences if e is not None]).astype(np.uint8)
-
-        return states, actions, rewards, next_states, dones
-
-    def __len__(self):
-        return self._buffer.__len__()
-
-
-class DqnAgent:
+class DqnAgent(_AgentBase):
     """Deep-Q network agent."""
 
     def __init__(self, model, actions, *,
                  brain_name='BananaBrain',
-                 replay_memory_size=1000,
                  model_file="dqn_checkpoint.pth",
+                 replay_memory_size=1000,
                  double_dqn=True):
         """Initialization.
 
         :param torch.nn.Module model: Q network.
         :param numpy.array actions: available actions.
-        :param str brain_name: the brain name of the environment.
         :param int replay_memory_size: size of the memory buffer.
-        :param str model_file: file to save the trained model.
         :param bool double_dqn: Use double DQN algorithm to reduce
             overestimation of the value function.
         """
-        self._brain_name = brain_name
+        super().__init__(brain_name, model_file)
 
         # Q-Network
         self._model = model.to(device)
@@ -81,8 +40,6 @@ class DqnAgent:
         self._actions = actions
 
         self._memory = Memory(replay_memory_size)
-
-        self._model_file = model_file
 
         self._double_dqn = double_dqn
 
@@ -268,20 +225,3 @@ class DqnAgent:
             'score_history': scores,
         }, self._model_file)
         print(f"Model save in {self._model_file} after {epoch} epochs!")
-
-    def play(self, env):
-        env_info = env.reset(train_mode=False)[self._brain_name]
-        state = env_info.vector_observations[0]
-        score = 0
-        while True:
-            action = self._act(state)
-            env_info = env.step(action)[self._brain_name]
-            next_state = env_info.vector_observations[0]
-            reward = env_info.rewards[0]
-            done = env_info.local_done[0]
-            score += reward
-            state = next_state
-            if done:
-                break
-
-        print(f"Final score is: {score}")

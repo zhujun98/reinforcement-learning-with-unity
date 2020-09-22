@@ -1,6 +1,8 @@
 """
 Copyright (c) 2020 Jun Zhu
 """
+import copy
+
 import numpy as np
 
 
@@ -35,30 +37,32 @@ def check_environment(env):
     return brain_name, state_size, action_size
 
 
-def play(env, brain_name=None, agent=None, continuous=False):
+def play(env, brain_name=None, agent=None, continuous=False, repeats=1):
     score = 0
     if agent is None:
-        # play randomly
-        brain = env.brains[brain_name]
-        action_size = brain.vector_action_space_size
-        env.reset(train_mode=False)
-        while True:
-            if continuous:
-                action = np.clip(np.random.randn(1, action_size), -1, 1)
-            else:
-                action = np.random.randint(action_size)
+        for i in range(repeats):
+            # play randomly
+            brain = env.brains[brain_name]
+            action_size = brain.vector_action_space_size
+            env.reset(train_mode=False)
+            while True:
+                if continuous:
+                    action = np.clip(np.random.randn(1, action_size), -1, 1)
+                else:
+                    action = np.random.randint(action_size)
 
-            env_info = env.step(action)[brain_name]
-            reward = env_info.rewards[0]
-            done = env_info.local_done[0]
-            score += reward
-            if done:
-                break
+                env_info = env.step(action)[brain_name]
+                reward = env_info.rewards[0]
+                done = env_info.local_done[0]
+                score += reward
+                if done:
+                    break
+            print(f"Score of play {i+1:02d}: {score:>12.4f}")
     else:
-        # use a trained agent
-        agent.play(env)
-
-    print("Score: {}".format(score))
+        for i in range(repeats):
+            # use a trained agent
+            score = agent.play(env)
+            print(f"Score of play {i+1:02d}: {score:>12.4f}")
 
 
 def plot_score_history(ax, scores, target_score):
@@ -86,8 +90,6 @@ def plot_losses(ax, loss1, label1, loss2=None, label2=None, *, downsampling=1.):
         ax2.set_ylabel(label2, color='tab:orange', fontsize=16)
         ax2.tick_params(axis='y', labelcolor='tab:orange')
 
-    ax.legend()
-
 
 class OUProcess:
     """Ornstein-Uhlenbeck process simulator."""
@@ -113,3 +115,20 @@ class OUProcess:
         dx = self._theta * (self._mu - x) + self._sigma * w
         self._x += dx
         return self._x
+
+
+def copy_nn(src, dst):
+    """Copy the parameters of a source network to the target."""
+    dst.load_state_dict(copy.deepcopy(src.state_dict()))
+
+
+def soft_update_nn(src, dst, tau):
+    """Apply soft update to a target network.
+
+    :param torch.nn.Module src: src Neural network model.
+    :param torch.nn.Module dst: dst Neural network model.
+    :param float tau: soft update factor.
+    """
+    for src_param, dst_param in zip(src.parameters(), dst.parameters()):
+        dst_param.data.copy_(
+            tau * src_param.data + (1. - tau) * dst_param.data)
