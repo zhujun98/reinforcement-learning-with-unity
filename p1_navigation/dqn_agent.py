@@ -119,8 +119,7 @@ class DqnAgent(_AgentBase):
         :param double weight_decay: L2 penalty.
         :param int batch_size: mini batch size.
         :param int replay_start_size: a uniform random policy is run for this
-            number of frames before learning starts and the resulting
-            experience is used to populate the replay memory.
+            number of frames before training starts.
         :param int window: the latest window episodes will be used to evaluate
             the performance of the model.
         :param float target_score: the the average score of the latest window
@@ -136,7 +135,7 @@ class DqnAgent(_AgentBase):
                                weight_decay=weight_decay)
 
         try:
-            checkpoint = torch.load(self._model_file, map_location=device)
+            checkpoint = torch.load(self._model_file)
         except FileNotFoundError:
             checkpoint = None
 

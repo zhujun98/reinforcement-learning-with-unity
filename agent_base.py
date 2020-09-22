@@ -22,10 +22,14 @@ class Memory:
         """
         self._buffer = deque(maxlen=buffer_size)
 
-    def append(self, state, action, reward, next_state, done):
+    def append(self, states, actions, rewards, next_states, dones):
         """Add a new experience to memory."""
-        self._buffer.append(
-            Transition(state, action, reward, next_state, done))
+        self._buffer.append(Transition(
+            np.array(states).flatten(),
+            np.array(actions).flatten(),
+            np.array(rewards).flatten(),
+            np.array(next_states).flatten(),
+            np.array(dones).flatten()))
 
     def sample(self, batch_size, device=None):
         """Randomly sample a batch of sequences from memory.
@@ -33,7 +37,6 @@ class Memory:
         :param int batch_size: sample batch size.
         """
         experiences = random.sample(self._buffer, k=batch_size)
-
         states = np.vstack([e.state for e in experiences if e is not None])
         actions = np.vstack([e.action for e in experiences if e is not None])
         rewards = np.vstack([e.reward for e in experiences if e is not None])

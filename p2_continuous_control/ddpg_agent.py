@@ -41,6 +41,7 @@ class DdpgAgent(_AgentBase):
         self._memory = Memory(replay_memory_size)
 
     def _act(self, state, noise=0.):
+        """Override."""
         state = torch.from_numpy(state).float().to(device)
         self._model_actor.eval()  # set the module in evaluation mode
         with torch.no_grad():
@@ -119,8 +120,7 @@ class DdpgAgent(_AgentBase):
         :param double weight_decay: L2 penalties for actor and critic models.
         :param int batch_size: mini batch size.
         :param int replay_start_size: a uniform random policy is run for this
-            number of frames before learning starts and the resulting
-            experience is used to populate the replay memory.
+            number of frames before training starts.
         :param int window: the latest window episodes will be used to evaluate
             the performance of the model.
         :param float target_score: the the average score of the latest window
@@ -139,7 +139,7 @@ class DdpgAgent(_AgentBase):
                                 weight_decay=weight_decay[1])
 
         try:
-            checkpoint = torch.load(self._model_file, map_location=device)
+            checkpoint = torch.load(self._model_file)
         except FileNotFoundError:
             checkpoint = None
 
@@ -235,7 +235,6 @@ class DdpgAgent(_AgentBase):
         return scores, losses_actor, losses_critic
 
     def _save_model(self, epoch, opt_actor, opt_critic, scores, losses):
-        """Override."""
         torch.save({
             'epoch': epoch,
             'optimizer_actor_state_dict': opt_actor.state_dict(),
