@@ -131,14 +131,14 @@ class DqnAgent(_AgentBase):
         :param int output_frequency: the frequency of summarizing the
             training result.
         """
-        try:
-            checkpoint = torch.load(self._model_file)
-        except FileNotFoundError:
-            checkpoint = None
-
         optimizer = optim.Adam(self._model.parameters(),
                                lr=learning_rate,
                                weight_decay=weight_decay)
+
+        try:
+            checkpoint = torch.load(self._model_file, map_location=device)
+        except FileNotFoundError:
+            checkpoint = None
 
         if checkpoint is None:
             i0 = 0

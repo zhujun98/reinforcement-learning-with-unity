@@ -138,7 +138,7 @@ class DdpgAgent(_AgentBase):
                                 weight_decay=weight_decay[1])
 
         try:
-            checkpoint = torch.load(self._model_file)
+            checkpoint = torch.load(self._model_file, map_location=device)
         except FileNotFoundError:
             checkpoint = None
 
