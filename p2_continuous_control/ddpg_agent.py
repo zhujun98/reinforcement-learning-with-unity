@@ -62,12 +62,6 @@ class DdpgAgent(_AgentBase):
         """
         states, actions, rewards, next_states, dones = experiences
 
-        states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).float().to(device)
-        rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
-        dones = torch.from_numpy(dones).float().to(device)
-
         # shape = (batch size, 1)
         q_next = self._model_critic_target(
             next_states, self._model_actor_target(next_states))
@@ -199,7 +193,7 @@ class DdpgAgent(_AgentBase):
 
                 if len(self._memory) > replay_start_size:
                     loss_actor, loss_critic = self._learn(
-                        self._memory.sample(batch_size),
+                        self._memory.sample(batch_size, device=device),
                         opt_actor,
                         opt_critic,
                         gamma)

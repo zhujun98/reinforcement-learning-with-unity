@@ -4,6 +4,7 @@ Copyright (c) 2020 Jun Zhu
 import random
 
 import numpy as np
+import torch
 
 from collections import namedtuple, deque
 
@@ -26,7 +27,7 @@ class Memory:
         self._buffer.append(
             Transition(state, action, reward, next_state, done))
 
-    def sample(self, batch_size):
+    def sample(self, batch_size, device=None):
         """Randomly sample a batch of sequences from memory.
 
         :param int batch_size: sample batch size.
@@ -40,6 +41,13 @@ class Memory:
             e.next_state for e in experiences if e is not None])
         dones = np.vstack([
             e.done for e in experiences if e is not None]).astype(np.uint8)
+
+        if device is not None:
+            states = torch.from_numpy(states).float().to(device)
+            actions = torch.from_numpy(actions).float().to(device)
+            rewards = torch.from_numpy(rewards).float().to(device)
+            next_states = torch.from_numpy(next_states).float().to(device)
+            dones = torch.from_numpy(dones).float().to(device)
 
         return states, actions, rewards, next_states, dones
 
@@ -58,23 +66,26 @@ class _AgentBase:
         self._brain_name = brain_name
         self._model_file = model_file
 
-    def _act(self, state):
+        self._n_agents = 1
+
+    def _act(self, *args, **kwargs):
         raise NotImplementedError
 
     def play(self, env):
         """Play the environment once."""
         env_info = env.reset(train_mode=False)[self._brain_name]
-        state = env_info.vector_observations[0]
-        score = 0
+        states = env_info.vector_observations
+        scores = [0] * self._n_agents
         while True:
-            action = self._act(state)
-            env_info = env.step(action)[self._brain_name]
-            next_state = env_info.vector_observations[0]
-            reward = env_info.rewards[0]
-            done = env_info.local_done[0]
-            score += reward
-            state = next_state
-            if done:
+            actions = self._act(states)
+            env_info = env.step(actions)[self._brain_name]
+            next_states = env_info.vector_observations
+            states = next_states
+            rewards = env_info.rewards
+            for i_a in range(self._n_agents):
+                scores[i_a] += rewards[i_a]
+
+            if env_info.local_done[0]:
                 break
 
-        return score
+        return max(scores)

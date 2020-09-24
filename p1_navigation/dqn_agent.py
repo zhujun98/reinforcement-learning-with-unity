@@ -70,12 +70,6 @@ class DqnAgent(_AgentBase):
         """
         states, actions, rewards, next_states, dones = experiences
 
-        states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).long().to(device)
-        rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
-        dones = torch.from_numpy(dones).float().to(device)
-
         # shape = (batch size, action space size)
         q_next = self._model_target(next_states).detach()
         if self._double_dqn:
@@ -184,7 +178,7 @@ class DqnAgent(_AgentBase):
                 state = next_state
 
                 if len(self._memory) > replay_start_size:
-                    self._learn(self._memory.sample(batch_size),
+                    self._learn(self._memory.sample(batch_size, device=device),
                                 optimizer,
                                 gamma)
 
