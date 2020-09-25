@@ -52,13 +52,14 @@ class DdpgAgent(_AgentBase):
         action = np.clip(action, -1., 1.)
         return action
 
-    def _learn(self, experiences, opt_actor, opt_critic, gamma):
+    def _learn(self, experiences, opt_actor, opt_critic, gamma, tau):
         """Learn from a given trajectory.
 
         :param (Tuple[torch.Variable]) experiences: (s, a, r, s', done)
         :param Optimizer opt_actor: actor optimizer used for gradient ascend.
         :param Optimizer opt_critic: critic optimizer used for gradient ascend.
         :param float gamma: discount factor.
+        :param float tau: soft update rate of the target network.
         """
         states, actions, rewards, next_states, dones = experiences
 
@@ -81,6 +82,12 @@ class DdpgAgent(_AgentBase):
         actor_loss = -actor_loss.mean()
         actor_loss.backward()
         opt_actor.step()
+
+        # apply soft update
+        soft_update_nn(
+            self._model_actor, self._model_actor_target, tau)
+        soft_update_nn(
+            self._model_critic, self._model_critic_target, tau)
 
         return actor_loss.item(), critic_loss.item()
 
@@ -186,6 +193,7 @@ class DdpgAgent(_AgentBase):
                 action = self._act(state, random_process.next() * decay)
                 env_info = env.step(action)[brain_name]
                 reward = env_info.rewards[0]
+                score += reward
                 next_state = env_info.vector_observations[0]
                 done = env_info.local_done[0]
                 self._memory.append(state, action, reward, next_state, done)
@@ -196,18 +204,12 @@ class DdpgAgent(_AgentBase):
                         self._memory.sample(batch_size, device=device),
                         opt_actor,
                         opt_critic,
-                        gamma)
+                        gamma,
+                        tau
+                    )
 
                     losses_actor.append(loss_actor)
                     losses_critic.append(loss_critic)
-
-                    # apply soft update
-                    soft_update_nn(
-                        self._model_actor, self._model_actor_target, tau)
-                    soft_update_nn(
-                        self._model_critic, self._model_critic_target, tau)
-
-                score += reward
 
                 if done:
                     break
