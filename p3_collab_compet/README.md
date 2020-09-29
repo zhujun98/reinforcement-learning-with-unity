@@ -1,4 +1,4 @@
-# Project 3: Collaboration and Competition
+# Project 3: Collaboration and Competition - Tennis
 
 ### Introduction
 
@@ -30,4 +30,4 @@ The environment is considered solved, when the average (over 100 episodes) of th
     
 3. Place the file in the `p3_collab_compet/` folder, and unzip (or decompress) the file.
 
-4. Run the [Jupyter notebook](./Collab_Compet.ipynb).
+4. Run the [Jupyter notebook](./Tennis.ipynb).

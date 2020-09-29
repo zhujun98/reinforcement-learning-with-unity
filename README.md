@@ -7,11 +7,11 @@
 
 This repository contains the solutions for the following projects:
 
-- [P1 Nativagation](./p1_navigation)
+- [P1 Nativagation](./p1_navigation) (DQN)
 
-- [P2 Continuous control](/p2_continuous_control)
+- [P2 Continuous control](./p2_continuous_control) (DDPG)
 
-- [P3 Collaboration and Competition](/p3_collab_compet)
+- [P3 Collaboration and Competition](./p3_collab_compet) (MADDPG)
 
 ### Setup
 
