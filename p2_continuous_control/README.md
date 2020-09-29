@@ -1,6 +1,6 @@
 # Project 2: Continuous Control
 
-![Trained agent](https://user-images.githubusercontent.com/10624937/43851024-320ba930-9aff-11e8-8493-ee547c6af349.gif)
+![Trained agent](./trained_reacher_agent.gif)
 
 ### Introduction
 
