@@ -11,6 +11,8 @@ This repository contains the solutions for the following projects:
 
 - [P2 Continuous control](/p2_continuous_control)
 
+- [P3 Collaboration and Competition](/p3_collab_compet)
+
 ### Setup
 
 For all the projects in this repository, you will need to create the following Conda environment in the first place:

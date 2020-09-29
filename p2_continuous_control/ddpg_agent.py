@@ -41,6 +41,7 @@ class DdpgAgent(_AgentBase):
         self._memory = Memory(replay_memory_size)
 
     def _act(self, state, noise=0.):
+        """Override."""
         state = torch.from_numpy(state).float().to(device)
         self._model_actor.eval()  # set the module in evaluation mode
         with torch.no_grad():
@@ -52,21 +53,16 @@ class DdpgAgent(_AgentBase):
         action = np.clip(action, -1., 1.)
         return action
 
-    def _learn(self, experiences, opt_actor, opt_critic, gamma):
+    def _learn(self, experiences, opt_actor, opt_critic, gamma, tau):
         """Learn from a given trajectory.
 
         :param (Tuple[torch.Variable]) experiences: (s, a, r, s', done)
         :param Optimizer opt_actor: actor optimizer used for gradient ascend.
         :param Optimizer opt_critic: critic optimizer used for gradient ascend.
         :param float gamma: discount factor.
+        :param float tau: soft update rate of the target network.
         """
         states, actions, rewards, next_states, dones = experiences
-
-        states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).float().to(device)
-        rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
-        dones = torch.from_numpy(dones).float().to(device)
 
         # shape = (batch size, 1)
         q_next = self._model_critic_target(
@@ -87,6 +83,12 @@ class DdpgAgent(_AgentBase):
         actor_loss = -actor_loss.mean()
         actor_loss.backward()
         opt_actor.step()
+
+        # apply soft update
+        soft_update_nn(
+            self._model_actor, self._model_actor_target, tau)
+        soft_update_nn(
+            self._model_critic, self._model_critic_target, tau)
 
         return actor_loss.item(), critic_loss.item()
 
@@ -118,8 +120,7 @@ class DdpgAgent(_AgentBase):
         :param double weight_decay: L2 penalties for actor and critic models.
         :param int batch_size: mini batch size.
         :param int replay_start_size: a uniform random policy is run for this
-            number of frames before learning starts and the resulting
-            experience is used to populate the replay memory.
+            number of frames before training starts.
         :param int window: the latest window episodes will be used to evaluate
             the performance of the model.
         :param float target_score: the the average score of the latest window
@@ -192,6 +193,7 @@ class DdpgAgent(_AgentBase):
                 action = self._act(state, random_process.next() * decay)
                 env_info = env.step(action)[brain_name]
                 reward = env_info.rewards[0]
+                score += reward
                 next_state = env_info.vector_observations[0]
                 done = env_info.local_done[0]
                 self._memory.append(state, action, reward, next_state, done)
@@ -199,21 +201,15 @@ class DdpgAgent(_AgentBase):
 
                 if len(self._memory) > replay_start_size:
                     loss_actor, loss_critic = self._learn(
-                        self._memory.sample(batch_size),
+                        self._memory.sample(batch_size, device=device),
                         opt_actor,
                         opt_critic,
-                        gamma)
+                        gamma,
+                        tau
+                    )
 
                     losses_actor.append(loss_actor)
                     losses_critic.append(loss_critic)
-
-                    # apply soft update
-                    soft_update_nn(
-                        self._model_actor, self._model_actor_target, tau)
-                    soft_update_nn(
-                        self._model_critic, self._model_critic_target, tau)
-
-                score += reward
 
                 if done:
                     break
@@ -239,7 +235,6 @@ class DdpgAgent(_AgentBase):
         return scores, losses_actor, losses_critic
 
     def _save_model(self, epoch, opt_actor, opt_critic, scores, losses):
-        """Override."""
         torch.save({
             'epoch': epoch,
             'optimizer_actor_state_dict': opt_actor.state_dict(),

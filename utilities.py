@@ -6,10 +6,12 @@ import copy
 import numpy as np
 
 
-def check_environment(env):
+def check_environment(env, *, return_n_agents=False):
     """Check environment.
 
     :param UnityEnvironment env: unity environment.
+    :param bool return_n_agents: True for returning also the number of agents.
+        For backward compatibility.
     """
     # get the default brain
     brain_name = env.brain_names[0]
@@ -22,7 +24,8 @@ def check_environment(env):
     env_info = env.reset(train_mode=False)[brain_name]
 
     # number of agents in the environment
-    print('Number of agents:', len(env_info.agents))
+    n_agents = len(env_info.agents)
+    print('Number of agents:', n_agents)
 
     # examine the state space
     state = env_info.vector_observations[0]
@@ -34,30 +37,35 @@ def check_environment(env):
     action_size = brain.vector_action_space_size
     print('Number of actions:', action_size)
 
+    if return_n_agents:
+        return brain_name, state_size, action_size, n_agents
     return brain_name, state_size, action_size
 
 
 def play(env, brain_name=None, agent=None, continuous=False, repeats=1):
-    score = 0
+    n_agents = len(env.reset(train_mode=False)[brain_name].agents)
     if agent is None:
         for i in range(repeats):
+            scores = [0] * n_agents
+
             # play randomly
             brain = env.brains[brain_name]
             action_size = brain.vector_action_space_size
             env.reset(train_mode=False)
             while True:
                 if continuous:
-                    action = np.clip(np.random.randn(1, action_size), -1, 1)
+                    actions = np.clip(
+                        np.random.randn(n_agents, action_size), -1., 1.)
                 else:
-                    action = np.random.randint(action_size)
+                    actions = np.random.randint(action_size)
 
-                env_info = env.step(action)[brain_name]
-                reward = env_info.rewards[0]
-                done = env_info.local_done[0]
-                score += reward
-                if done:
+                env_info = env.step(actions)[brain_name]
+                for i_a in range(n_agents):
+                    scores[i_a] += env_info.rewards[i_a]
+
+                if env_info.local_done[0]:
                     break
-            print(f"Score of play {i+1:02d}: {score:>12.4f}")
+            print(f"Score of play {i+1:02d}: {max(scores):>12.4f}")
     else:
         for i in range(repeats):
             # use a trained agent

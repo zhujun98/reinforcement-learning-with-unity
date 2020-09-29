@@ -11,6 +11,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from agent_base import _AgentBase, Memory
+from utilities import copy_nn
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -61,20 +62,15 @@ class DqnAgent(_AgentBase):
             return np.argmax(action_values.cpu().numpy())
         return random.choice(self._actions)
 
-    def _learn(self, experiences, optimizer, gamma):
+    def _learn(self, experiences, optimizer, gamma, update=False):
         """Update value parameters using given batch of experience tuples.
 
         :param (Tuple[torch.Variable]) experiences: (s, a, r, s', done)
         :param Optimizer optimizer: optimizer used for gradient ascend.
         :param float gamma: discount factor.
+        :param bool update: True for updating the target network.
         """
         states, actions, rewards, next_states, dones = experiences
-
-        states = torch.from_numpy(states).float().to(device)
-        actions = torch.from_numpy(actions).long().to(device)
-        rewards = torch.from_numpy(rewards).float().to(device)
-        next_states = torch.from_numpy(next_states).float().to(device)
-        dones = torch.from_numpy(dones).float().to(device)
 
         # shape = (batch size, action space size)
         q_next = self._model_target(next_states).detach()
@@ -91,6 +87,10 @@ class DqnAgent(_AgentBase):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # update target network
+        if update:
+            copy_nn(self._model, self._model_target)
 
     def train(self, env, *,
               n_episodes=1000,
@@ -119,8 +119,7 @@ class DqnAgent(_AgentBase):
         :param double weight_decay: L2 penalty.
         :param int batch_size: mini batch size.
         :param int replay_start_size: a uniform random policy is run for this
-            number of frames before learning starts and the resulting
-            experience is used to populate the replay memory.
+            number of frames before training starts.
         :param int window: the latest window episodes will be used to evaluate
             the performance of the model.
         :param float target_score: the the average score of the latest window
@@ -131,14 +130,14 @@ class DqnAgent(_AgentBase):
         :param int output_frequency: the frequency of summarizing the
             training result.
         """
+        optimizer = optim.Adam(self._model.parameters(),
+                               lr=learning_rate,
+                               weight_decay=weight_decay)
+
         try:
             checkpoint = torch.load(self._model_file)
         except FileNotFoundError:
             checkpoint = None
-
-        optimizer = optim.Adam(self._model.parameters(),
-                               lr=learning_rate,
-                               weight_decay=weight_decay)
 
         if checkpoint is None:
             i0 = 0
@@ -178,22 +177,18 @@ class DqnAgent(_AgentBase):
                 action = self._act(state, epsilon=eps)
                 env_info = env.step(action)[brain_name]
                 reward = env_info.rewards[0]
+                score += reward
                 next_state = env_info.vector_observations[0]
                 done = env_info.local_done[0]
                 self._memory.append(state, action, reward, next_state, done)
                 state = next_state
 
                 if len(self._memory) > replay_start_size:
-                    self._learn(self._memory.sample(batch_size),
+                    self._learn(self._memory.sample(batch_size, device=device),
                                 optimizer,
-                                gamma)
+                                gamma,
+                                i_step % target_network_update_frequency == 0)
 
-                # update target network
-                if i_step % target_network_update_frequency == 0:
-                    self._model_target.load_state_dict(
-                        copy.deepcopy(self._model.state_dict()))
-
-                score += reward
                 if done:
                     break
 
