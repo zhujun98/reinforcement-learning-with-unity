@@ -78,11 +78,15 @@ class _AgentBase:
         """Play the environment once."""
         env_info = env.reset(train_mode=False)[self._brain_name]
         states = env_info.vector_observations
+        if self._brain_name in ['BananaBrain']:
+            states = states[0]
         scores = [0] * self._n_agents
         while True:
             actions = self._act(states)
             env_info = env.step(actions)[self._brain_name]
             next_states = env_info.vector_observations
+            if self._brain_name in ['BananaBrain']:
+                next_states = next_states[0]
             states = next_states
             rewards = env_info.rewards
             for i_a in range(self._n_agents):
